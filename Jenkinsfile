@@ -1,15 +1,18 @@
 pipeline {
   agent any
   tools {
-      terraform "Terraform1.0.0"
+      "org.jenkinsci.plugins.terraform.TerraformInstallation" "terraform"
   }
-
-  stages {
-    stage('Git Checkout') {
-      steps {
-        git credentialsId: '16**-**-**-**-**cb', url: 'https://git-codecommit.us-west-2.amazonaws.com/v1/repos/TerraformJenkins'
-      }
-    }
+	parameters{
+		srting(name:'WORKSPACE', defaultValue: 'development', description: 'setting up workspace for terraform')
+	}
+	environment {
+		TF_HOME = tool('terraform')
+		TP_LOG = "WARN"
+		PATH = "$TF_HOME:$PATH"
+		ACCESS_KEY = credentials('AWS_ACCESS_KEY')
+		SECRET_KEY = credentials('AWS_SECRET_KEY')
+	}
     stage('Terraform Init') {
       steps {
         sh label: '', script: 'terraform init'
@@ -27,6 +30,11 @@ post {
       body: "Terraform code validation got filed please check in this build ${env.BUILD_URL}"
   }
 }
+ stage('Terraform plan') {
+      steps {
+        sh label: '', script: 'terraform plan'
+      }
+    }	
     stage('Terraform apply') {
       steps {
         sh label: '', script: 'terraform apply --auto-approve'
@@ -37,18 +45,6 @@ post {
     mail to: 'gajulapallen@quinnox.com',
       subject: "EC2 instance got created",
       body: "EC2 instance got created secussfully"
-  }
-}
-	stage('Terraform destroy') {
-      steps {
-        sh label: '', script: 'terraform destroy'
-      }
-    }
-	post {
-  success {
-    mail to: 'gajulapallen@quinnox.com',
-      subject: "EC2 instance got teriminated",
-      body: "EC2 instance got teriminated secussfully"
   }
 }
   }
